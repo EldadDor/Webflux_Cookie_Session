@@ -1,4 +1,4 @@
-package com.edx.reactive;
+package com.edx.reactive.common;
 
 import lombok.Setter;
 import org.springframework.beans.factory.config.BeanDefinition;

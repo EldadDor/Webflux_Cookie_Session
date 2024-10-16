@@ -1,5 +1,9 @@
-package com.edx.reactive;
+package com.edx.reactive.config;
 
+import com.edx.reactive.common.CookieDataWrapper;
+import com.edx.reactive.common.CookieData;
+import com.edx.reactive.common.CookieSession;
+import com.edx.reactive.utils.CookieDataProxyCreator;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.context.ApplicationContext;
@@ -7,7 +11,6 @@ import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.util.Optional;
 
 
 public class ExtendedCookieDataBeanPostProcessor extends CommonAnnotationBeanPostProcessor implements SmartInstantiationAwareBeanPostProcessor {

@@ -1,7 +1,5 @@
-package com.edx.reactive;
+package com.edx.reactive.common;
 
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

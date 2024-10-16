@@ -1,4 +1,4 @@
-package com.edx.reactive;
+package com.edx.reactive.common;
 
 public interface WebConstants {
     String COOKIE_SESSION_DATA = "cookie_session_data";

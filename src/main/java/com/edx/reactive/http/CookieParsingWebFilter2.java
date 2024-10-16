@@ -1,32 +1,19 @@
-package com.edx.reactive;
+package com.edx.reactive.http;
 
+import com.edx.reactive.common.CookieDataWrapper;
+import com.edx.reactive.utils.CompressionUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.*;
 import reactor.core.publisher.Mono;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
-import java.lang.reflect.Field;
-import java.util.Base64;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
-import java.io.ByteArrayOutputStream;
-
-import static com.edx.reactive.WebConstants.COOKIE_SESSION_DATA;
+import static com.edx.reactive.common.WebConstants.COOKIE_SESSION_DATA;
 
 
 @Component

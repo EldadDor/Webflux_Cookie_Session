@@ -1,9 +1,8 @@
-package com.edx.reactive;
+package com.edx.reactive.http;
 
-import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.Scope;
+import com.edx.reactive.common.CookieSession;
+import com.edx.reactive.common.Order;
+import com.edx.reactive.common.OrderItem;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

@@ -1,7 +1,6 @@
-package com.edx.reactive;
+package com.edx.reactive.common;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.lang.annotation.*;
 

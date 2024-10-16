@@ -1,4 +1,4 @@
-package com.edx.reactive;
+package com.edx.reactive.common;
 
 public class OrderItem  {
 	private String name;
