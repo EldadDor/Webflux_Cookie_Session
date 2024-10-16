@@ -58,8 +58,10 @@ public class ExtendedCookieDataBeanPostProcessor extends CommonAnnotationBeanPos
 		try {
 			Class<?> type = field.getType();
 			if (isCookieDataType(type)) {
-				CookieDataWrapper<?> wrapper = applicationContext.getBean(CookieDataWrapper.class, type);
-				Object proxy = proxyCreator.createProxy(wrapper, type);
+				@SuppressWarnings("unchecked")
+				CookieDataWrapper<Object> wrapper = applicationContext.getBean(CookieDataWrapper.class);
+				@SuppressWarnings("unchecked")
+				Object proxy = proxyCreator.createProxy(wrapper, (Class<Object>) type);
 				field.set(bean, proxy);
 			}
 		} catch (IllegalAccessException e) {

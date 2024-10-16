@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 @Scope(BeanDefinition.SCOPE_PROTOTYPE)
 public class CookieDataWrapper<T> {
 	private T data;
-	@Setter
 	private boolean changed = false;
 
 	public CookieDataWrapper() {
@@ -36,4 +35,7 @@ public class CookieDataWrapper<T> {
 		changed = false;
 	}
 
+	public void setChanged(boolean changed) {
+		this.changed = changed;
+	}
 }

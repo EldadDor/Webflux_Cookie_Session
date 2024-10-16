@@ -3,44 +3,26 @@ package com.edx.reactive.utils;
 import com.edx.reactive.common.CookieDataWrapper;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
-import org.springframework.cglib.proxy.MethodProxy;
+import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-
+@Component
 public class CookieDataProxyCreator {
 
 	@SuppressWarnings("unchecked")
-	public <T> T createProxy(CookieDataWrapper<?> wrapper, Class<T> type) {
-		if (type.isInterface()) {
-			// Use JDK dynamic proxy for interfaces
-			return (T) Proxy.newProxyInstance(
-					type.getClassLoader(),
-					new Class<?>[]{type},
-					(proxy, method, args) -> {
-						if (method.getName().startsWith("set")) {
-							wrapper.setChanged(true);
-						}
-						return method.invoke(wrapper.getData(), args);
-					}
-			);
-		} else {
-			// Use CGLIB proxy for concrete classes
-			Enhancer enhancer = new Enhancer();
-			enhancer.setSuperclass(type);
-			enhancer.setCallback(new MethodInterceptor() {
-				@Override
-				public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
-					if (method.getName().startsWith("set")) {
-						wrapper.setChanged(true);
-					}
-					if (wrapper.getData() == null) {
-						return proxy.invoke(wrapper, args);
-					}
-					return proxy.invoke(wrapper.getData(), args);
-				}
-			});
-			return (T) enhancer.create();
-		}
+	public <T> T createProxy(CookieDataWrapper<T> wrapper, Class<T> type) {
+		Enhancer enhancer = new Enhancer();
+		enhancer.setSuperclass(type);
+		enhancer.setCallback((MethodInterceptor) (obj, method, args, proxy) -> {
+			if (method.getName().startsWith("set")) {
+				wrapper.setChanged(true);
+			}
+			T data = wrapper.getData();
+			if (data == null) {
+				data = type.getDeclaredConstructor().newInstance();
+				wrapper.setData(data);
+			}
+			return method.invoke(data, args);
+		});
+		return (T) enhancer.create();
 	}
 }

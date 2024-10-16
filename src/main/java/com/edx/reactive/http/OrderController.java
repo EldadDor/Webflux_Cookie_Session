@@ -3,28 +3,40 @@ package com.edx.reactive.http;
 import com.edx.reactive.common.CookieSession;
 import com.edx.reactive.common.Order;
 import com.edx.reactive.common.OrderItem;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 @RestController
+@RequestMapping("/api/orders")
 public class OrderController {
+
     @CookieSession
     private Order order;
 
-    @GetMapping("/order")
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @GetMapping
     public Mono<String> getOrder() {
-        return Mono.just(String.format("Order: %s, Items: %d, Total: %.1f",
+        ensureOrderInitialized();
+        return Mono.just(String.format("Order: %s, Items: %d, Total: %.2f",
                 order.getId(), order.getItems().size(), order.getTotal()));
     }
 
-    @PostMapping("/order/add")
+    @PostMapping("/add")
     public Mono<String> addItem(@RequestBody OrderItem item) {
+        ensureOrderInitialized();
         order.getItems().add(item);
         order.setTotal(order.getTotal() + (item.getPrice() * item.getQuantity()));
-        return Mono.just(String.format("Item added: %s, Quantity: %d, Price: %.1f",
+        return Mono.just(String.format("Item added: %s, Quantity: %d, Price: %.2f",
                 item.getName(), item.getQuantity(), item.getPrice()));
+    }
+
+    private void ensureOrderInitialized() {
+        if (order == null) {
+            order = applicationContext.getBean(Order.class);
+        }
     }
 }
