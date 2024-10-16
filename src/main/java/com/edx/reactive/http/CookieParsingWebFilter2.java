@@ -18,8 +18,7 @@ import reactor.core.publisher.Mono;
 import static com.edx.reactive.common.WebConstants.COOKIE_NAME;
 import static com.edx.reactive.common.WebConstants.COOKIE_SESSION_DATA;
 
-@Component
-@Order(1)
+@Deprecated
 public class CookieParsingWebFilter2 implements WebFilter {
 
     @Autowired

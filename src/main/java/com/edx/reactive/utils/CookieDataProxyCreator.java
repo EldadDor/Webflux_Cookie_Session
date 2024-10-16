@@ -1,28 +1,35 @@
 package com.edx.reactive.utils;
 
+import com.edx.reactive.common.CookieData;
 import com.edx.reactive.common.CookieDataWrapper;
-import org.springframework.cglib.proxy.Enhancer;
-import org.springframework.cglib.proxy.MethodInterceptor;
-import org.springframework.stereotype.Component;
+import org.springframework.cglib.proxy.InvocationHandler;
+import org.springframework.cglib.proxy.Proxy;
 
-@Component
+import java.lang.reflect.Method;
+
+
 public class CookieDataProxyCreator {
+    public <T extends CookieData> T createProxy(CookieDataWrapper<T> wrapper, Class<T> type) {
+        return (T) Proxy.newProxyInstance(
+                type.getClassLoader(),
+                new Class<?>[] { type },
+                new CookieDataInvocationHandler<>(wrapper)
+        );
+    }
 
-	@SuppressWarnings("unchecked")
-	public <T> T createProxy(CookieDataWrapper<T> wrapper, Class<T> type) {
-		Enhancer enhancer = new Enhancer();
-		enhancer.setSuperclass(type);
-		enhancer.setCallback((MethodInterceptor) (obj, method, args, proxy) -> {
-			if (method.getName().startsWith("set")) {
-				wrapper.setChanged(true);
-			}
-			T data = wrapper.getData();
-			if (data == null) {
-				data = type.getDeclaredConstructor().newInstance();
-				wrapper.setData(data);
-			}
-			return method.invoke(data, args);
-		});
-		return (T) enhancer.create();
-	}
+    private static class CookieDataInvocationHandler<T extends CookieData> implements InvocationHandler {
+        private final CookieDataWrapper<T> wrapper;
+
+        public CookieDataInvocationHandler(CookieDataWrapper<T> wrapper) {
+            this.wrapper = wrapper;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            if (method.getName().startsWith("set")) {
+                wrapper.setChanged(true);
+            }
+            return method.invoke(wrapper.getData(), args);
+        }
+    }
 }

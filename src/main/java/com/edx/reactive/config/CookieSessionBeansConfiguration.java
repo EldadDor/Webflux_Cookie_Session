@@ -7,17 +7,21 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class CookieSessionBeansConfiguration {
+/*
 
-	@Bean
-	public CookieDataProxyCreator cookieDataProxyCreator() {
-		return new CookieDataProxyCreator();
-	}
+    @Bean
+    public CookieDataProxyCreator cookieDataProxyCreator() {
+        return new CookieDataProxyCreator();
+    }
+*/
 
-	@Bean
-	public ExtendedCookieDataBeanPostProcessor extendedCookieDataBeanPostProcessor(
-			ApplicationContext applicationContext, CookieDataProxyCreator proxyCreator) {
-		return new ExtendedCookieDataBeanPostProcessor(applicationContext, proxyCreator);
-	}
+/*
+    @Bean
+    public ExtendedCookieDataBeanPostProcessor extendedCookieDataBeanPostProcessor(
+            ApplicationContext applicationContext, CookieDataProxyCreator proxyCreator) {
+        return new ExtendedCookieDataBeanPostProcessor(applicationContext, proxyCreator);
+    }
+*/
 
 
 }

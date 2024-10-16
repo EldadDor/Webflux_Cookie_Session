@@ -3,89 +3,100 @@ package com.edx.reactive.config;
 import com.edx.reactive.common.CookieDataWrapper;
 import com.edx.reactive.common.CookieData;
 import com.edx.reactive.common.CookieSession;
+import com.edx.reactive.http.CookieSessionExchangeDecorator;
+import com.edx.reactive.http.CookieSessionResponseDecorator;
 import com.edx.reactive.utils.CookieDataProxyCreator;
+import com.edx.reactive.utils.LazyLoadingCookieDataProxy;
+import com.edx.reactive.utils.ReactiveRequestContextHolder;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
+import org.springframework.cglib.proxy.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 
-public class ExtendedCookieDataBeanPostProcessor extends CommonAnnotationBeanPostProcessor implements SmartInstantiationAwareBeanPostProcessor {
-	private final ApplicationContext applicationContext;
-	private final CookieDataProxyCreator proxyCreator;
+@Component
+public class ExtendedCookieDataBeanPostProcessor implements BeanPostProcessor {
 
 
-	public ExtendedCookieDataBeanPostProcessor(ApplicationContext applicationContext, CookieDataProxyCreator proxyCreator) {
-		this.applicationContext = applicationContext;
-		this.proxyCreator = proxyCreator;
-	}
+    ApplicationContext applicationContext;
+    CookieDataProxyCreator proxyCreator;
 
-	@Override
-	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-		Object processedBean = super.postProcessBeforeInitialization(bean, beanName);
-		return injectCookieData(processedBean, beanName);
-	}
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        Class<?> beanClass = bean.getClass();
+        for (Field field : beanClass.getDeclaredFields()) {
+            CookieSession annotation = field.getAnnotation(CookieSession.class);
+            if (annotation != null) {
+                injectCookieDataProxy(bean, field);
+            }
+        }
+        return bean;
+    }
 
-	@Override
-	public boolean postProcessAfterInstantiation(Object bean, String beanName) {
-		return super.postProcessAfterInstantiation(bean, beanName);
-	}
+    private void injectCookieDataProxy(Object bean, Field field) {
+        field.setAccessible(true);
+        try {
+            Class<?> type = field.getType();
+            if (CookieData.class.isAssignableFrom(type)) {
+                Object proxy;
+                if (type.isInterface()) {
+                    // Use Java's dynamic proxy for interfaces
+                    proxy = Proxy.newProxyInstance(
+                            type.getClassLoader(),
+                            new Class<?>[]{type},
+                            new CookieDataInvocationHandler()
+                    );
+                } else {
+                    // Use CGLIB for classes
+                    Enhancer enhancer = new Enhancer();
+                    enhancer.setSuperclass(type);
+                    enhancer.setCallback(new MethodInterceptor() {
+                        @Override
+                        public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
+                            return new CookieDataInvocationHandler().invoke(obj, method, args);
+                        }
+                    });
+                    proxy = enhancer.create();
+                }
+                field.set(bean, proxy);
+            }
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Error injecting cookie data proxy", e);
+        }
+    }
 
-	private Object injectCookieData(Object bean, String beanName) {
-		Class<?> beanClass = bean.getClass();
-		for (Field field : beanClass.getDeclaredFields()) {
-			boolean cookieDataField = isCookieDataField(field);
-			if (cookieDataField) {
-				injectCookieDataProxy(bean, field);
-			}
-		}
-		return bean;
-	}
+    private static class CookieDataInvocationHandler implements InvocationHandler {
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            return ReactiveRequestContextHolder.getExchange()
+                    .flatMap(exchange -> {
+                        if (exchange instanceof CookieSessionExchangeDecorator) {
+                            CookieSessionExchangeDecorator decoratedExchange = (CookieSessionExchangeDecorator) exchange;
+                            CookieData cookieData = decoratedExchange.getCookieData();
+                            try {
+                                Object result = method.invoke(cookieData, args);
+                                if (method.getName().startsWith("set")) {
+                                    ((CookieSessionResponseDecorator) decoratedExchange.getResponse()).setCookieDataChanged(true);
+                                }
+                                return Mono.just(result);
+                            } catch (Exception e) {
+                                return Mono.error(e);
+                            }
+                        }
+                        return Mono.error(new IllegalStateException("CookieSessionExchangeDecorator not found in current exchange"));
+                    })
+                    .block(); // Note: blocking here is not ideal in a reactive context, but necessary for the proxy
+        }
 
-	private boolean isCookieDataField(Field field) {
-		return field.isAnnotationPresent(CookieSession.class);
-	}
+    }
 
-	private boolean isCookieDataType(Class<?> type) {
-		return CookieData.class.isAssignableFrom(type);
-	}
-
-	private void injectCookieDataProxy(Object bean, Field field) {
-		field.setAccessible(true);
-		try {
-			Class<?> type = field.getType();
-			if (isCookieDataType(type)) {
-				@SuppressWarnings("unchecked")
-				CookieDataWrapper<Object> wrapper = applicationContext.getBean(CookieDataWrapper.class);
-				@SuppressWarnings("unchecked")
-				Object proxy = proxyCreator.createProxy(wrapper, (Class<Object>) type);
-				field.set(bean, proxy);
-			}
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException("Error injecting cookie data proxy", e);
-		}
-	}
-
-	@Override
-	public Class<?> predictBeanType(Class<?> beanClass, String beanName) throws BeansException {
-		return SmartInstantiationAwareBeanPostProcessor.super.predictBeanType(beanClass, beanName);
-	}
-
-	@Override
-	public Class<?> determineBeanType(Class<?> beanClass, String beanName) throws BeansException {
-		return SmartInstantiationAwareBeanPostProcessor.super.determineBeanType(beanClass, beanName);
-	}
-
-	@Override
-	public Constructor<?>[] determineCandidateConstructors(Class<?> beanClass, String beanName) throws BeansException {
-		return SmartInstantiationAwareBeanPostProcessor.super.determineCandidateConstructors(beanClass, beanName);
-	}
-
-	@Override
-	public Object getEarlyBeanReference(Object bean, String beanName) throws BeansException {
-		return SmartInstantiationAwareBeanPostProcessor.super.getEarlyBeanReference(bean, beanName);
-	}
 }

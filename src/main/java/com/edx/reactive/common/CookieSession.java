@@ -1,6 +1,7 @@
 package com.edx.reactive.common;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import java.lang.annotation.*;
 
@@ -8,6 +9,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Autowired
+@Lazy
 public @interface CookieSession {
 	boolean required() default true;
 }
