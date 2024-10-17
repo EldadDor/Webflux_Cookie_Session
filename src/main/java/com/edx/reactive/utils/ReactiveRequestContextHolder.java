@@ -5,7 +5,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.context.Context;
 
 public class ReactiveRequestContextHolder {
-    private static final Class<ServerWebExchange> CONTEXT_KEY = ServerWebExchange.class;
+    public static final Class<ServerWebExchange> CONTEXT_KEY = ServerWebExchange.class;
 
     public static Mono<ServerWebExchange> getExchange() {
         return Mono.deferContextual(contextView ->

@@ -1,6 +1,8 @@
 package com.edx.reactive.common;
 
-public class Client implements CookieData {
+import java.util.concurrent.CompletableFuture;
+
+public class Client extends CompletableFuture implements CookieData {
     private String id;
     private String firstName;
     private String lastName;

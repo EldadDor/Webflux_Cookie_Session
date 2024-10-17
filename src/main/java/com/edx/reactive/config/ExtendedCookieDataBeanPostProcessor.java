@@ -49,14 +49,12 @@ public class ExtendedCookieDataBeanPostProcessor implements BeanPostProcessor {
             if (CookieData.class.isAssignableFrom(type)) {
                 Object proxy;
                 if (type.isInterface()) {
-                    // Use Java's dynamic proxy for interfaces
                     proxy = Proxy.newProxyInstance(
                             type.getClassLoader(),
                             new Class<?>[]{type},
                             new CookieDataInvocationHandler()
                     );
                 } else {
-                    // Use CGLIB for classes
                     Enhancer enhancer = new Enhancer();
                     enhancer.setSuperclass(type);
                     enhancer.setCallback(new MethodInterceptor() {
@@ -76,7 +74,7 @@ public class ExtendedCookieDataBeanPostProcessor implements BeanPostProcessor {
 
     private static class CookieDataInvocationHandler implements InvocationHandler {
         @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        public Object invoke(Object proxy, Method method, Object[] args) {
             return ReactiveRequestContextHolder.getExchange()
                     .flatMap(exchange -> {
                         if (exchange instanceof CookieSessionExchangeDecorator) {
@@ -87,16 +85,17 @@ public class ExtendedCookieDataBeanPostProcessor implements BeanPostProcessor {
                                 if (method.getName().startsWith("set")) {
                                     ((CookieSessionResponseDecorator) decoratedExchange.getResponse()).setCookieDataChanged(true);
                                 }
-                                return Mono.just(result);
+                                return Mono.justOrEmpty(result);
                             } catch (Exception e) {
                                 return Mono.error(e);
                             }
                         }
                         return Mono.error(new IllegalStateException("CookieSessionExchangeDecorator not found in current exchange"));
                     })
-                    .block(); // Note: blocking here is not ideal in a reactive context, but necessary for the proxy
+                    .toFuture();
         }
-
     }
+
+
 
 }

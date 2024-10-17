@@ -4,10 +4,12 @@ import com.edx.reactive.common.CookieData;
 import com.edx.reactive.common.CookieDataWrapper;
 import org.springframework.cglib.proxy.InvocationHandler;
 import org.springframework.cglib.proxy.Proxy;
+import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
 
 
+@Service
 public class CookieDataProxyCreator {
     public <T extends CookieData> T createProxy(CookieDataWrapper<T> wrapper, Class<T> type) {
         return (T) Proxy.newProxyInstance(

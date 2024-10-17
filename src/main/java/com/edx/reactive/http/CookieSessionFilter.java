@@ -2,7 +2,9 @@ package com.edx.reactive.http;
 
 import com.edx.reactive.common.CookieData;
 import com.edx.reactive.common.CookieDataWrapper;
+import com.edx.reactive.common.DefaultCookieData;
 import com.edx.reactive.utils.CookieDataProxyCreator;
+import com.edx.reactive.utils.ReactiveRequestContextHolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
@@ -16,7 +18,7 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class CookieSessionFilter implements WebFilter {
 
     private static final String COOKIE_NAME = "x-cookie-name";
@@ -27,18 +29,29 @@ public class CookieSessionFilter implements WebFilter {
 
     @Autowired
     private CookieDataProxyCreator proxyCreator;
+
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         return Mono.justOrEmpty(exchange.getRequest().getCookies().getFirst(COOKIE_NAME))
                 .map(HttpCookie::getValue)
                 .map(this::decryptAndDecompress)
                 .map(this::deserializeCookieData)
-                .defaultIfEmpty(null)
-                .flatMap(cookieData -> {
-                    CookieSessionExchangeDecorator decoratedExchange = new CookieSessionExchangeDecorator(exchange, cookieData);
-                    return chain.filter(decoratedExchange)
-                            .then(Mono.fromRunnable(() -> handleResponse(decoratedExchange)));
-                });
+                .defaultIfEmpty(createDefaultCookieData())
+                .map(cookieData -> new CookieSessionExchangeDecorator(exchange, cookieData))
+                .flatMap(decoratedExchange ->
+                        ReactiveRequestContextHolder.setExchange(decoratedExchange)
+                                .then(chain.filter(decoratedExchange))
+                                .then(Mono.fromRunnable(() -> handleResponse(decoratedExchange)))
+                )
+                .contextWrite(ctx -> ctx.put(ReactiveRequestContextHolder.CONTEXT_KEY, exchange))
+                .then();
+    }
+
+    private CookieData createDefaultCookieData() {
+        // Create and return a default CookieData object
+        // This method should be implemented based on your CookieData interface
+        return new DefaultCookieData(); // Implement this class as needed
     }
 
     private void handleResponse(CookieSessionExchangeDecorator exchange) {
