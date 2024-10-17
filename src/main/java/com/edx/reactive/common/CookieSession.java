@@ -12,4 +12,5 @@ import java.lang.annotation.*;
 @Lazy
 public @interface CookieSession {
 	boolean required() default true;
+	String value() default "";
 }

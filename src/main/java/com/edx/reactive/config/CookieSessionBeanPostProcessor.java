@@ -1,27 +1,26 @@
 package com.edx.reactive.config;
 
 import com.edx.reactive.common.CookieData;
-import com.edx.reactive.common.CookieDataWrapper;
 import com.edx.reactive.common.CookieSession;
-import com.edx.reactive.http.CookieSessionFilter;
-import com.edx.reactive.utils.CookieDataProxyCreator;
+import com.edx.reactive.http.CglibProxyFactory;
+import com.edx.reactive.utils.ReactiveRequestContextHolder;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Field;
 
-//@Component
+
+@Component
 public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final ApplicationContext context;
 
-    @Autowired
-    private CookieDataProxyCreator proxyCreator;
+    public CookieSessionBeanPostProcessor(ApplicationContext context) {
+        this.context = context;
+    }
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
@@ -29,47 +28,30 @@ public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
         for (Field field : beanClass.getDeclaredFields()) {
             CookieSession annotation = field.getAnnotation(CookieSession.class);
             if (annotation != null) {
-                injectCookieSessionData(bean, field);
+                String cookieName = annotation.value().isEmpty() ? field.getName() : annotation.value();
+                injectCookieData(bean, field, cookieName);
             }
         }
         return bean;
     }
 
-    private void injectCookieSessionData(Object bean, Field field) {
+    private void injectCookieData(Object bean, Field field, String cookieName) {
         field.setAccessible(true);
-        try {
-            Object cookieData = applicationContext.getBean(ServerWebExchange.class)
-                    .getAttribute(CookieSessionFilter.COOKIE_SESSION_DATA);
+        Mono<CookieData> cookieDataMono = ReactiveRequestContextHolder.getExchange()
+                .map(exchange -> (CookieData) exchange.getAttribute("cookieData"))
+                .switchIfEmpty(Mono.fromSupplier(() -> createNewCookieData(field.getType())));
 
-            if (cookieData == null) {
-                Class<?> fieldType = field.getType();
-                if (CookieData.class.isAssignableFrom(fieldType)) {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends CookieData> cookieDataType = (Class<? extends CookieData>) fieldType;
-                    cookieData = createNewCookieDataProxy(cookieDataType);
-                } else {
-                    throw new IllegalArgumentException("Field type must implement CookieData interface");
-                }
+        cookieDataMono.subscribe(cookieData -> {
+            try {
+                field.set(bean, cookieData);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Failed to inject cookie data", e);
             }
-
-            field.set(bean, cookieData);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException("Failed to inject cookie session data", e);
-        }
+        });
     }
 
-    private <T extends CookieData> T createNewCookieDataProxy(Class<T> type) {
-        CookieDataWrapper<T> wrapper = new CookieDataWrapper<>(null);
-        wrapper.setChanged(true);
-        return proxyCreator.createProxy(wrapper, type);
-    }
 
- /*   private Object createNewCookieDataProxy(Class<?> type) {
-        if (CookieData.class.isAssignableFrom(type)) {
-            CookieDataWrapper<?> wrapper = new CookieDataWrapper<>(null);
-            wrapper.setChanged(true);
-            return proxyCreator.createProxy(wrapper, type);
-        }
-        throw new IllegalArgumentException("Field type must implement CookieData interface");
-    }*/
+    private CookieData createNewCookieData(Class<?> type) {
+        return (CookieData) CglibProxyFactory.createProxy(type);
+    }
 }

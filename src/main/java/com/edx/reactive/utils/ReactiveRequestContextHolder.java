@@ -5,19 +5,23 @@ import reactor.core.publisher.Mono;
 import reactor.util.context.Context;
 
 public class ReactiveRequestContextHolder {
-    public static final Class<ServerWebExchange> CONTEXT_KEY = ServerWebExchange.class;
+
+    private static final Class<ServerWebExchange> CONTEXT_KEY = ServerWebExchange.class;
 
     public static Mono<ServerWebExchange> getExchange() {
         return Mono.deferContextual(contextView ->
-                contextView.<ServerWebExchange>getOrEmpty(CONTEXT_KEY)
-                        .map(Mono::just)
-                        .orElse(Mono.empty())
-        );
+                Mono.justOrEmpty(contextView.getOrEmpty(CONTEXT_KEY)));
     }
 
     public static Mono<Void> setExchange(ServerWebExchange exchange) {
         return Mono.deferContextual(contextView ->
-                Mono.just(Context.of(CONTEXT_KEY, exchange).putAll(contextView))
-        ).contextWrite(context -> context.put(CONTEXT_KEY, exchange)).then();
+                        Mono.just(exchange)
+                                .contextWrite(context -> context.put(CONTEXT_KEY, exchange)))
+                .then();
+    }
+
+    public static Mono<Context> getContext() {
+        return Mono.deferContextual(contextView -> Mono.just(Context.of(contextView)));
     }
 }
+

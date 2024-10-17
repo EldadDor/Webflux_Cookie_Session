@@ -2,7 +2,6 @@ package com.edx.reactive.config;
 
 import com.edx.reactive.common.Client;
 import com.edx.reactive.common.Portfolio;
-import com.edx.reactive.utils.CookieDataProxyCreator;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +13,7 @@ import org.springframework.web.service.annotation.PutExchange;
 import org.springframework.web.service.invoker.HttpExchangeAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
-@Configuration
+//@Configuration
 public class TestClientConfig {
 
 
