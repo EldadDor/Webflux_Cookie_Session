@@ -1,12 +1,14 @@
-package com.edx.reactive.http;
+package com.edx.reactive.utils;
 
 import org.springframework.cglib.proxy.Enhancer;
+import org.springframework.cglib.proxy.Factory;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.Method;
 
 public class CglibProxyFactory {
+
     public static <T> T createProxy(Class<T> targetClass) {
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(targetClass);
@@ -15,7 +17,14 @@ public class CglibProxyFactory {
         return (T) enhancer.create();
     }
 
-    static class ModifyingMethodInterceptor implements MethodInterceptor {
+    public static MethodInterceptor getInvocationHandler(Object proxy) {
+        if (proxy instanceof Factory) {
+            return (MethodInterceptor) ((Factory) proxy).getCallback(0);
+        }
+        throw new IllegalArgumentException("The provided object is not a CGLIB proxy");
+    }
+
+    public static class ModifyingMethodInterceptor implements MethodInterceptor {
         private boolean modified = false;
 
         @Override
