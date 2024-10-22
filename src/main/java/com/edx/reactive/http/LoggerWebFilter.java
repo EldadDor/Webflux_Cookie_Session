@@ -1,5 +1,7 @@
 package com.edx.reactive.http;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.*;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class LoggerWebFilter implements WebFilter {
+	private static final Logger LOGGER = LogManager.getLogger(LoggerWebFilter.class);
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -41,20 +44,21 @@ public class LoggerWebFilter implements WebFilter {
 		final String requestString = String.format("uri=[%s], method=[%s], headers=-[%s], query=[%s]", uri, httpMethod, headers, query);
 
 
-//		if (logRequest)
-//			Logger.info("request income={}", requestString);
+		if (logRequest)
+			LOGGER.info("request income={}", requestString);
 		{
 			return chain.filter(exchange)
 					.doOnError(throwable -> System.out.println("throwable = " + throwable))
 					.doFinally(signalType -> {
 						if (logRequest) {
-							final HttpStatusCode httpStatus = Optional.of(exchange).map(ServerWebExchange::getResponse).map(ServerHttpResponse::getStatusCode).orElse(null);
-						/*Logger.info("request finished in  lapTime={} ms status={}, {}", System.currentTimeMillis() - requestStartMillis,
-								httpStatus, requestString);*/
+							 HttpStatusCode httpStatus = Optional.of(exchange).map(ServerWebExchange::getResponse).map(ServerHttpResponse::getStatusCode).orElse(null);
+						LOGGER.info("request finished in  lapTime={} ms status={}, {}", System.currentTimeMillis() - requestStartMillis,
+								httpStatus, requestString);
 						}
 					});
 		}
 	}
+
 
 	private String mapKeyValueToFormattedString(Map<String, String> map) {
 		return map.keySet().stream()
