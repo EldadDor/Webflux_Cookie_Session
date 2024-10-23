@@ -1,5 +1,7 @@
 package com.edx.reactive.model;
 
+import java.util.Objects;
+
 public abstract class AbstractVehicle implements Vehicle {
     protected VehicleType type;
     protected String id;
@@ -60,5 +62,18 @@ public abstract class AbstractVehicle implements Vehicle {
     public Vehicle setBrand(String brand) {
         this.brand = brand;
         return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AbstractVehicle that = (AbstractVehicle) o;
+        return engineCapacity == that.engineCapacity && type == that.type && Objects.equals(id, that.id) && Objects.equals(color, that.color) && Objects.equals(brand, that.brand);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, id, color, engineCapacity, brand);
     }
 }

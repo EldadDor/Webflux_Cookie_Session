@@ -1,13 +1,15 @@
 package com.edx.reactive.http;
 
 import com.edx.reactive.common.CookieData;
-import com.edx.reactive.utils.CglibProxyFactory;
-import com.edx.reactive.utils.CookieDataInvocationHandler;
-import com.edx.reactive.utils.CookieDataManager;
-import com.edx.reactive.utils.CookieEncryptionService;
+import com.edx.reactive.common.DefaultCookieData;
+import com.edx.reactive.common.WebConstants;
+import com.edx.reactive.utils.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpCookie;
@@ -22,51 +24,58 @@ import reactor.core.publisher.Mono;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class CookieDataFilter implements WebFilter {
 
-    private static final String COOKIE_NAME = "session_cookie";
+    private static final Logger log = LogManager.getLogger(CookieDataFilter.class);
 
     private final ObjectMapper objectMapper;
     private final CookieEncryptionService encryptionService;
     private final CookieDataManager cookieDataManager;
+    private final ApplicationContext applicationContext;
 
     @Autowired
-    public CookieDataFilter(ObjectMapper objectMapper, CookieEncryptionService encryptionService, CookieDataManager cookieDataManager) {
+    public CookieDataFilter(ObjectMapper objectMapper, CookieEncryptionService encryptionService, CookieDataManager cookieDataManager, ApplicationContext applicationContext) {
         this.objectMapper = objectMapper;
         this.encryptionService = encryptionService;
         this.cookieDataManager = cookieDataManager;
+        this.applicationContext = applicationContext;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return exchange.getSession()
-                .flatMap(session -> {
-                    HttpCookie cookie = exchange.getRequest().getCookies().getFirst(COOKIE_NAME);
-
-                    if (cookie == null) {
-                        return chain.filter(exchange);
-                    }
-
-                    return processCookie(cookie, exchange)
-                            .flatMap(cookieData -> {
-                                cookieDataManager.setCookieData(session.getId(), cookieData);
+        String path = exchange.getRequest().getURI().getPath();
+        if (isSwaggerOrSpringDocUrl(path)) {
+            return chain.filter(exchange);
+        }
+        return ReactiveRequestContextHolder.setExchange(exchange)
+                .then(exchange.getSession()
+                        .flatMap(session -> {
+                            HttpCookie cookie = exchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
+                            if (cookie == null) {
+                                if (!cookieDataManager.containsSession(session.getId())) {
+                                    cookieDataManager.createEmptySession(session.getId());
+                                }
                                 return chain.filter(exchange);
-                            });
-                })
+                            }
+                            return processCookie(cookie, session.getId())
+                                    .flatMap(cookieData -> {
+                                        cookieDataManager.setCookieData(session.getId(), cookieData);
+                                        return chain.filter(exchange);
+                                    });
+                        })
+                )
                 .then(Mono.defer(() -> handleResponse(exchange)));
     }
 
-    private Mono<CookieData> processCookie(HttpCookie cookie, ServerWebExchange exchange) {
+    private boolean isSwaggerOrSpringDocUrl(String path) {
+        return path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/webjars/");
+    }
+
+    private Mono<CookieData> processCookie(HttpCookie cookie, String sessionId) {
         return Mono.fromCallable(() -> {
             String decryptedValue = encryptionService.decrypt(cookie.getValue());
-            CookieData cookieData = objectMapper.readValue(decryptedValue, CookieData.class);
-            return cookieData;
+            return objectMapper.readValue(decryptedValue, CookieData.class);
         }).onErrorResume(e -> {
-            // Handle decryption or deserialization errors
-            return Mono.just(new CookieData() {
-                @Override
-                public String name() {
-                    return "defaultCookieData";
-                }
-            });
+            log.error("Error processing cookie", e);
+            return Mono.just(createDefaultCookieData());
         });
     }
 
@@ -74,23 +83,28 @@ public class CookieDataFilter implements WebFilter {
         return exchange.getSession()
                 .flatMap(session -> {
                     CookieData cookieData = cookieDataManager.getCookieData(session.getId());
-                    if (cookieData != null) {
+                    if (cookieData != null && CglibProxyFactory.isProxy(cookieData)) {
                         CookieDataInvocationHandler invocationHandler = (CookieDataInvocationHandler) CglibProxyFactory.getInvocationHandler(cookieData);
-
                         if (invocationHandler.isModified()) {
                             try {
                                 String jsonValue = objectMapper.writeValueAsString(cookieData);
                                 String encryptedValue = encryptionService.encrypt(jsonValue);
-                                ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, encryptedValue)
+                                ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
                                         .path("/")
                                         .build();
                                 exchange.getResponse().addCookie(cookie);
                             } catch (JsonProcessingException e) {
-                                // Handle exception
+                                log.error("Error serializing cookie data", e);
                             }
                         }
                     }
                     return Mono.empty();
                 });
     }
+
+    private CookieData createDefaultCookieData() {
+        // Create and return a default CookieData object based on the type
+        return applicationContext.getBean(DefaultCookieData.class);
+    }
+
 }

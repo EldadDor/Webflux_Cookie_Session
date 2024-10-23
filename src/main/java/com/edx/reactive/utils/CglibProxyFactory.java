@@ -1,13 +1,15 @@
 package com.edx.reactive.utils;
 
-import org.springframework.cglib.proxy.Enhancer;
-import org.springframework.cglib.proxy.Factory;
-import org.springframework.cglib.proxy.MethodInterceptor;
-import org.springframework.cglib.proxy.MethodProxy;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.cglib.proxy.*;
 
 import java.lang.reflect.Method;
 
 public class CglibProxyFactory {
+
+    private static final Logger log = LogManager.getLogger(CglibProxyFactory.class);
+
 
     public static <T> T createProxy(Class<T> targetClass) {
         Enhancer enhancer = new Enhancer();
@@ -17,9 +19,16 @@ public class CglibProxyFactory {
         return (T) enhancer.create();
     }
 
+    public static boolean isProxy(Object obj) {
+        return obj instanceof Factory && ((Factory) obj).getCallbacks().length > 0;
+    }
+
     public static MethodInterceptor getInvocationHandler(Object proxy) {
         if (proxy instanceof Factory) {
-            return (MethodInterceptor) ((Factory) proxy).getCallback(0);
+            Callback[] callbacks = ((Factory) proxy).getCallbacks();
+            if (callbacks.length > 0 && callbacks[0] instanceof MethodInterceptor) {
+                return (MethodInterceptor) callbacks[0];
+            }
         }
         throw new IllegalArgumentException("The provided object is not a CGLIB proxy");
     }
@@ -39,4 +48,5 @@ public class CglibProxyFactory {
             return modified;
         }
     }
+
 }

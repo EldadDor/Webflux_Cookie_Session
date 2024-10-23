@@ -1,8 +1,10 @@
 package com.edx.reactive.config.vehicle;
 
+import com.edx.reactive.common.WebConstants;
 import com.edx.reactive.model.Car;
 import com.edx.reactive.model.Motorbike;
 import com.edx.reactive.model.Vehicle;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,37 @@ public class VehicleControllerTest {
                 .configureClient()
                 .responseTimeout(Duration.ofMinutes(5)) // Increase timeout to 30 seconds
                 .build();
+    }
+
+
+    @Test
+    void testSingleVehicleEndpoint() {
+        Car car1 = (Car) new Car().setColor("Red").setBrand("Toyota").setEngineCapacity(1800);
+        String car1Id = createVehicle(car1);
+
+        Vehicle responseBody = getVehicleById(car1Id)
+                .expectBody(Vehicle.class)
+                .returnResult()
+                .getResponseBody();
+
+        Assertions.assertThat(responseBody)
+                .isInstanceOf(Car.class)
+                .usingRecursiveComparison()
+                .ignoringFields("id")
+                .isEqualTo(car1);
+
+        Assertions.assertThat(responseBody.getId()).isEqualTo(car1Id);
+    }
+
+
+    @Test
+    void testSingleVehicleEndpoint2() {
+        Car car1 = (Car) new Car().setColor("Red").setBrand("Toyota").setEngineCapacity(1800);
+        String car1Id = createVehicle(car1);
+        WebTestClient.BodySpec<Vehicle, ?> vehicleBodySpec = getVehicleById(car1Id).expectBody(Vehicle.class);
+        Vehicle responseBody = vehicleBodySpec.returnResult().getResponseBody();
+        Vehicle expected = car1.setId(car1Id);
+        vehicleBodySpec.isEqualTo(expected);
     }
 
     @Test
@@ -127,7 +160,7 @@ public class VehicleControllerTest {
                 .exchange()
                 .returnResult(Vehicle.class)
                 .getResponseCookies()
-                .getFirst("session_cookie")
+                .getFirst(WebConstants.COOKIE_NAME)
                 .getValue();
     }
 }
