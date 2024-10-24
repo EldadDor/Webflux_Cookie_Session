@@ -60,7 +60,7 @@ public class CookieSessionAspect {
                         cookieData = createDefaultCookieData(field.getType());
                         cookieDataManager.setCookieData(session.getId(), cookieData);
                     }
-                    CookieData proxiedData = CglibProxyFactory.createProxy(cookieData.getClass());
+                    CookieData proxiedData = CglibProxyFactory.createProxy(cookieData);
                     try {
                         field.set(target, proxiedData);
                     } catch (IllegalAccessException e) {

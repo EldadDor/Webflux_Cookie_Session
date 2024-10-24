@@ -11,16 +11,26 @@ public class CglibProxyFactory {
     private static final Logger log = LogManager.getLogger(CglibProxyFactory.class);
 
 
-    public static <T> T createProxy(Class<T> targetClass) {
+    public static <T> T createProxy(T targetObject) {
         Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(targetClass);
-        ModifyingMethodInterceptor interceptor = new ModifyingMethodInterceptor();
+        enhancer.setSuperclass(targetObject.getClass());
+        ModifyingMethodInterceptor interceptor = new ModifyingMethodInterceptor(targetObject);
         enhancer.setCallback(interceptor);
         return (T) enhancer.create();
     }
 
     public static boolean isProxy(Object obj) {
         return obj instanceof Factory && ((Factory) obj).getCallbacks().length > 0;
+    }
+
+
+    public static <T> T getTargetObject(T proxy) {
+        if (isProxy(proxy)) {
+            Factory factory = (Factory) proxy;
+            ModifyingMethodInterceptor interceptor = (ModifyingMethodInterceptor) factory.getCallback(0);
+            return (T) interceptor.getTargetObject();
+        }
+        return proxy;
     }
 
     public static MethodInterceptor getInvocationHandler(Object proxy) {
@@ -35,17 +45,26 @@ public class CglibProxyFactory {
 
     public static class ModifyingMethodInterceptor implements MethodInterceptor {
         private boolean modified = false;
+        private final Object targetObject;
+
+        public ModifyingMethodInterceptor(Object targetObject) {
+            this.targetObject = targetObject;
+        }
 
         @Override
         public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy) throws Throwable {
             if (method.getName().startsWith("set")) {
                 modified = true;
             }
-            return proxy.invokeSuper(obj, args);
+            return method.invoke(targetObject, args);
         }
 
         public boolean isModified() {
             return modified;
+        }
+
+        public Object getTargetObject() {
+            return targetObject;
         }
     }
 

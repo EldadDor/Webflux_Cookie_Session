@@ -1,5 +1,6 @@
 package com.edx.reactive.model;
 
+import com.edx.reactive.common.CookieData;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -10,7 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
         @JsonSubTypes.Type(value = Motorbike.class, name = "MOTORBIKE")
 })
 //@JsonDeserialize(using = VehicleDeserializer.class)
-public interface Vehicle {
+public interface Vehicle extends CookieData {
     String getId();
 
     Vehicle setId(String id);

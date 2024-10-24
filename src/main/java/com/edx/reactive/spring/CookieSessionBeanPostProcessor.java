@@ -62,7 +62,7 @@ public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
                             return null;
                         }
                     }
-                    CookieData proxiedData = CglibProxyFactory.createProxy(cookieData.getClass());
+                    CookieData proxiedData = CglibProxyFactory.createProxy(cookieData);
                     try {
                         field.set(bean, proxiedData);
                     } catch (IllegalAccessException e) {
