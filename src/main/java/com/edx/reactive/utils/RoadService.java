@@ -3,6 +3,9 @@ package com.edx.reactive.utils;
 import com.edx.reactive.common.CookieSession;
 import com.edx.reactive.model.RoadStatus;
 import com.edx.reactive.model.Vehicle;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -10,7 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Service
+@Component
 public class RoadService {
 
     @CookieSession

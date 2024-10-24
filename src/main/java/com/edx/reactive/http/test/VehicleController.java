@@ -1,5 +1,6 @@
 package com.edx.reactive.http.test;
 
+import com.edx.reactive.common.CookieSession;
 import com.edx.reactive.model.Car;
 import com.edx.reactive.model.Motorbike;
 import com.edx.reactive.model.Vehicle;
@@ -17,11 +18,15 @@ public class VehicleController {
 
     private final Map<String, Vehicle> vehicles = new ConcurrentHashMap<>();
 
+    @CookieSession
+    private Vehicle userVehicle;
+
     @PostMapping
     public Mono<Vehicle> createVehicle(@RequestBody Vehicle vehicle) {
         String id = generateId();
         vehicle.setId(id);
         vehicles.put(id, vehicle);
+        userVehicle = vehicle;
         return Mono.just(vehicle);
     }
 

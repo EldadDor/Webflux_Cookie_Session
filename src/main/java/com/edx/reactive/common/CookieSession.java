@@ -5,12 +5,13 @@ import org.springframework.context.annotation.Lazy;
 
 import java.lang.annotation.*;
 
-@Target({ElementType.TYPE, ElementType.FIELD})
+@Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Autowired
 @Lazy
 public @interface CookieSession {
-	boolean required() default true;
-	String value() default "";
+    boolean required() default true;
+
+    String value() default "";
 }

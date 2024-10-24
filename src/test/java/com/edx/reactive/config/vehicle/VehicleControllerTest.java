@@ -65,6 +65,7 @@ public class VehicleControllerTest {
         Vehicle responseBody = vehicleBodySpec.returnResult().getResponseBody();
         Vehicle expected = car1.setId(car1Id);
         vehicleBodySpec.isEqualTo(expected);
+        enterRoad(car1.setId(car1Id)).expectStatus().isOk();
     }
 
     @Test

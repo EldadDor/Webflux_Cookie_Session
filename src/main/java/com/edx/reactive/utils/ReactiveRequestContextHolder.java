@@ -15,8 +15,7 @@ public class ReactiveRequestContextHolder {
 
     public static Mono<Void> setExchange(ServerWebExchange exchange) {
         return Mono.deferContextual(contextView ->
-                        Mono.just(exchange)
-                                .contextWrite(context -> context.put(CONTEXT_KEY, exchange)))
+                        Mono.just(exchange).contextWrite(context -> context.put(CONTEXT_KEY, exchange)))
                 .then();
     }
 

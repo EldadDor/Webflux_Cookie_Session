@@ -13,10 +13,11 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 
 import java.lang.reflect.Field;
 
-@Component
+//@Component
 public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
 
     private static final Logger log = LogManager.getLogger(CookieSessionBeanPostProcessor.class);
@@ -49,7 +50,7 @@ public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
     private void injectProxiedCookieData(Object bean, Field field) {
         field.setAccessible(true);
         ReactiveRequestContextHolder.getExchange()
-                .flatMap(exchange -> exchange.getSession())
+                .flatMap(ServerWebExchange::getSession)
                 .map(session -> {
                     CookieData cookieData = cookieDataManager.getCookieData(session.getId());
                     if (cookieData == null) {
