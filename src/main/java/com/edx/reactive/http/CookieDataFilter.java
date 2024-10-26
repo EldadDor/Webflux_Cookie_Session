@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -39,29 +40,55 @@ public class CookieDataFilter implements WebFilter {
         this.applicationContext = applicationContext;
     }
 
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
         if (isSwaggerOrSpringDocUrl(path)) {
             return chain.filter(exchange);
         }
+
         return exchange.getSession()
-                        .flatMap(session -> {
-                            HttpCookie cookie = exchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
-                            if (cookie == null) {
-                                if (!cookieDataManager.containsSession(session.getId())) {
-                                    cookieDataManager.createEmptySession(session.getId());
-                                }
+                .flatMap(session -> {
+                    HttpCookie cookie = exchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
+                    if (cookie == null) {
+                        if (!cookieDataManager.containsSession(session.getId())) {
+                            cookieDataManager.createEmptySession(session.getId());
+                        }
+                        return chain.filter(exchange);
+                    }
+
+                    return processCookie(cookie, session.getId())
+                            .flatMap(cookieData -> {
+                                cookieDataManager.setCookieData(session.getId(), cookieData);
                                 return chain.filter(exchange);
-                            }
-                            return processCookie(cookie, session.getId())
-                                    .flatMap(cookieData -> {
-                                        cookieDataManager.setCookieData(session.getId(), cookieData);
-                                        return chain.filter(exchange);
-                                    });
-                        })
-                .then(Mono.defer(() -> handleResponse(exchange)));
+                            });
+                });
     }
+
+
+ /*   private Mono<Void> handleResponse(ServerWebExchange exchange, CookieData cookieData) {
+        if (CglibProxyFactory.isProxy(cookieData)) {
+            MethodInterceptor interceptor = CglibProxyFactory.getInvocationHandler(cookieData);
+            if (interceptor instanceof CglibProxyFactory.ModifyingMethodInterceptor) {
+                CglibProxyFactory.ModifyingMethodInterceptor modifyingInterceptor = (CglibProxyFactory.ModifyingMethodInterceptor) interceptor;
+                if (modifyingInterceptor.isModified()) {
+                    try {
+                        String jsonValue = objectMapper.writeValueAsString(cookieData);
+                        String encryptedValue = encryptionService.encrypt(jsonValue);
+                        ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
+                                .path("/")
+                                .build();
+                        exchange.getResponse().addCookie(cookie);
+                    } catch (JsonProcessingException e) {
+                        log.error("Error serializing cookie data", e);
+                    }
+                }
+            }
+        }
+        return Mono.empty();
+    }*/
+
 
     private boolean isSwaggerOrSpringDocUrl(String path) {
         return path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/webjars/");
@@ -77,28 +104,6 @@ public class CookieDataFilter implements WebFilter {
         });
     }
 
-    private Mono<Void> handleResponse(ServerWebExchange exchange) {
-        return exchange.getSession()
-                .flatMap(session -> {
-                    CookieData cookieData = cookieDataManager.getCookieData(session.getId());
-                    if (cookieData != null && CglibProxyFactory.isProxy(cookieData)) {
-                        CookieDataInvocationHandler invocationHandler = (CookieDataInvocationHandler) CglibProxyFactory.getInvocationHandler(cookieData);
-                        if (invocationHandler.isModified()) {
-                            try {
-                                String jsonValue = objectMapper.writeValueAsString(cookieData);
-                                String encryptedValue = encryptionService.encrypt(jsonValue);
-                                ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
-                                        .path("/")
-                                        .build();
-                                exchange.getResponse().addCookie(cookie);
-                            } catch (JsonProcessingException e) {
-                                log.error("Error serializing cookie data", e);
-                            }
-                        }
-                    }
-                    return Mono.empty();
-                });
-    }
 
     private CookieData createDefaultCookieData() {
         // Create and return a default CookieData object based on the type

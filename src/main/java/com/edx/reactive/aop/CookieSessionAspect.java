@@ -40,55 +40,6 @@ public class CookieSessionAspect {
     }
 
 
-    //    @Before("restControllerMethods()")
-  /*  public void injectCookieSessionData() {
-        log.info("injectCookieSessionData Before");
-        ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
-        if (exchange != null) {
-            exchange.getSession()
-                    .subscribe(session -> {
-                        String sessionId = session.getId();
-                        CookieData cookieData = cookieDataManager.getCookieData(sessionId);
-                        if (cookieData == null) {
-                            log.info("CookieData is NULL");
-                            cookieData = createDefaultCookieData(DefaultCookieData.class);
-                            cookieDataManager.setCookieData(sessionId, cookieData);
-                        }
-                        CookieData proxiedData = CglibProxyFactory.createProxy(cookieData);
-                        injectProxiedCookieData(proxiedData);
-                    });
-        }
-    }*/
-
-
-    private void injectProxiedCookieData(Object target, Field field, CookieData proxiedData) {
-        try {
-            field.setAccessible(true);
-            field.set(target, proxiedData);
-        } catch (IllegalAccessException e) {
-            log.error("Error injecting proxied cookie data", e);
-        }
-    }
-
-
- /*   private void injectProxiedCookieData(CookieData proxiedData) {
-        // Find and inject into fields annotated with @CookieSession
-        Object target = ReactiveRequestContextHolder.getExchange().getAttributes().get("target");
-        if (target != null) {
-            Class<?> targetClass = target.getClass();
-            for (Field field : targetClass.getDeclaredFields()) {
-                if (field.isAnnotationPresent(CookieSession.class)) {
-                    try {
-                        field.setAccessible(true);
-                        field.set(target, proxiedData);
-                    } catch (IllegalAccessException e) {
-                        log.error("Error injecting proxied cookie data", e);
-                    }
-                }
-            }
-        }
-    }*/
-
     @Around("@within(org.springframework.stereotype.Component) || " +
             "@within(org.springframework.stereotype.Service) || " +
             "@within(org.springframework.web.bind.annotation.RestController)")
@@ -103,7 +54,9 @@ public class CookieSessionAspect {
             }
         }
         try {
-            return joinPoint.proceed();
+            Object proceed = joinPoint.proceed();
+            log.info("aroundComponentOrRestController After");
+            return proceed;
         } catch (Throwable e) {
 //            throw new ServerErrorException(e.getMessage(), e);
             throw new RuntimeException(e);
