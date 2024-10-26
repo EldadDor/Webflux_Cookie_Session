@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -30,41 +31,47 @@ public class CookieResponseFilter implements WebFilter {
 
     @Autowired
     private CookieDataManager cookieDataManager;
+
     @Autowired
     private ObjectMapper objectMapper;
+
     @Autowired
     private CookieEncryptionService encryptionService;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return chain.filter(exchange)
-                .then(Mono.defer(() -> handleResponse(exchange)));
-    }
-
-    private Mono<Void> handleResponse(ServerWebExchange exchange) {
         return exchange.getSession()
                 .flatMap(session -> {
-                    CookieData cookieData = cookieDataManager.getCookieData(session.getId());
-                    if (cookieData != null && CglibProxyFactory.isProxy(cookieData)) {
-                        MethodInterceptor interceptor = CglibProxyFactory.getInvocationHandler(cookieData);
-                        if (interceptor instanceof CglibProxyFactory.ModifyingMethodInterceptor) {
-                            CglibProxyFactory.ModifyingMethodInterceptor modifyingInterceptor = (CglibProxyFactory.ModifyingMethodInterceptor) interceptor;
-                            if (modifyingInterceptor.isModified()) {
-                                try {
-                                    String jsonValue = objectMapper.writeValueAsString(cookieData);
-                                    String encryptedValue = encryptionService.encrypt(jsonValue);
-                                    ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
-                                            .path("/")
-                                            .build();
-                                    exchange.getResponse().addCookie(cookie);
-                                } catch (JsonProcessingException e) {
-                                    log.error("Error serializing cookie data", e);
-                                }
-                            }
-                        }
-                    }
-                    return Mono.empty();
+                    ServerWebExchange mutatedExchange = exchange.mutate()
+                            .response(new CookieResponseDecorator(exchange.getResponse()))
+                            .build();
+                    return chain.filter(mutatedExchange)
+                            .then(Mono.defer(() -> handleResponse(mutatedExchange, session)));
                 });
     }
 
+    private Mono<Void> handleResponse(ServerWebExchange exchange, WebSession session) {
+        CookieData cookieData = cookieDataManager.getCookieData(session.getId());
+        if (shouldUpdateCookie(cookieData)) {
+            try {
+                String jsonValue = objectMapper.writeValueAsString(cookieData);
+                String encryptedValue = encryptionService.encrypt(jsonValue);
+                ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
+                        .path("/")
+                        .build();
+                exchange.getResponse().addCookie(cookie);
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing cookie data", e);
+            }
+        }
+        return Mono.empty();
+    }
+
+    private boolean shouldUpdateCookie(CookieData cookieData) {
+        return cookieData != null &&
+                CglibProxyFactory.isProxy(cookieData) &&
+                CglibProxyFactory.getInvocationHandler(cookieData) instanceof CglibProxyFactory.ModifyingMethodInterceptor &&
+                ((CglibProxyFactory.ModifyingMethodInterceptor) CglibProxyFactory.getInvocationHandler(cookieData)).isModified();
+    }
 }
+

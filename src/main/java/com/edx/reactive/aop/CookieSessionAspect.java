@@ -54,7 +54,9 @@ public class CookieSessionAspect {
             }
         }
         try {
-            return joinPoint.proceed();
+            Object proceed = joinPoint.proceed();
+            log.info("aroundComponentOrRestController After");
+            return proceed;
         } catch (Throwable e) {
 //            throw new ServerErrorException(e.getMessage(), e);
             throw new RuntimeException(e);

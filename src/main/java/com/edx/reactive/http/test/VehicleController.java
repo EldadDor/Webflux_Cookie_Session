@@ -24,12 +24,13 @@ public class VehicleController {
 
     @PostMapping
     public Mono<Vehicle> createVehicle(@RequestBody Vehicle vehicle) {
-        String id = generateId();
-        vehicle.setId(id);
-        vehicles.put(id, vehicle);
-//        Mono.defer((Supplier<Mono<?>>) () -> Mono.justOrEmpty(userVehicle.clone(vehicle)));
-        userVehicle.clone(vehicle);
-        return Mono.just(vehicle);
+        return Mono.fromCallable(() -> {
+            String id = generateId();
+            vehicle.setId(id);
+            vehicles.put(id, vehicle);
+            userVehicle.clone(vehicle);
+            return vehicle;
+        });
     }
 
     @GetMapping("/{id}")
