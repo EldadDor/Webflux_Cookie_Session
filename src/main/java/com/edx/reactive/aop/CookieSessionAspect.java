@@ -41,7 +41,7 @@ public class CookieSessionAspect {
 
 
     //    @Before("restControllerMethods()")
-    public void injectCookieSessionData() {
+  /*  public void injectCookieSessionData() {
         log.info("injectCookieSessionData Before");
         ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
         if (exchange != null) {
@@ -58,7 +58,7 @@ public class CookieSessionAspect {
                         injectProxiedCookieData(proxiedData);
                     });
         }
-    }
+    }*/
 
 
     private void injectProxiedCookieData(Object target, Field field, CookieData proxiedData) {
@@ -71,7 +71,7 @@ public class CookieSessionAspect {
     }
 
 
-    private void injectProxiedCookieData(CookieData proxiedData) {
+ /*   private void injectProxiedCookieData(CookieData proxiedData) {
         // Find and inject into fields annotated with @CookieSession
         Object target = ReactiveRequestContextHolder.getExchange().getAttributes().get("target");
         if (target != null) {
@@ -87,7 +87,7 @@ public class CookieSessionAspect {
                 }
             }
         }
-    }
+    }*/
 
     @Around("@within(org.springframework.stereotype.Component) || " +
             "@within(org.springframework.stereotype.Service) || " +
@@ -105,7 +105,8 @@ public class CookieSessionAspect {
         try {
             return joinPoint.proceed();
         } catch (Throwable e) {
-            throw new ServerErrorException(e.getMessage(), e);
+//            throw new ServerErrorException(e.getMessage(), e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -119,12 +120,12 @@ public class CookieSessionAspect {
                 if (cookieData == null) {
                     log.info("CookieData is NULL");
                     cookieData = createDefaultCookieData(field.getType());
-                    cookieDataManager.setCookieData(sessionId, cookieData);
                 }
                 CookieData proxiedData = CglibProxyFactory.createProxy(cookieData);
                 try {
                     field.setAccessible(true);
                     field.set(target, proxiedData);
+                    cookieDataManager.setCookieData(sessionId, proxiedData);
                 } catch (IllegalAccessException e) {
                     log.error("error={}", e.getMessage(), e);
                 }
