@@ -41,13 +41,13 @@ public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
         Class<?> beanClass = bean.getClass();
         for (Field field : beanClass.getDeclaredFields()) {
             if (field.isAnnotationPresent(CookieSession.class)) {
-                injectProxiedCookieData(bean, field);
+//                injectProxiedCookieData(bean, field);
             }
         }
         return bean;
     }
 
-    private void injectProxiedCookieData(Object bean, Field field) {
+    /*private void injectProxiedCookieData(Object bean, Field field) {
         field.setAccessible(true);
         ReactiveRequestContextHolder.getExchange()
                 .flatMap(ServerWebExchange::getSession)
@@ -72,7 +72,7 @@ public class CookieSessionBeanPostProcessor implements BeanPostProcessor {
                 })
                 .subscribe();
     }
-
+*/
 
     private CookieData createDefaultCookieData(Class<?> type) {
         // Create and return a default CookieData object based on the type

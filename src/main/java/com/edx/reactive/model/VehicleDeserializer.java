@@ -18,15 +18,11 @@ public class VehicleDeserializer extends JsonDeserializer<Vehicle> {
         JsonNode node = codec.readTree(p);
 
         String type = node.get("type").asText();
-        Vehicle vehicle;
-
-        if ("CAR".equals(type)) {
-            vehicle = new Car();
-        } else if ("MOTORBIKE".equals(type)) {
-            vehicle = new Motorbike();
-        } else {
-            throw new IllegalArgumentException("Unknown vehicle type: " + type);
-        }
+        Vehicle vehicle = switch (type) {
+            case "CAR" -> new Car();
+            case "MOTORBIKE" -> new Motorbike();
+            case null, default -> throw new IllegalArgumentException("Unknown vehicle type: " + type);
+        };
 
         vehicle.setType(VehicleType.valueOf(type));
         vehicle.setColor(node.get("color").asText());

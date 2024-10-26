@@ -8,10 +8,6 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Autowired
-@Lazy
 public @interface CookieSession {
-    boolean required() default true;
-
     String value() default "";
 }

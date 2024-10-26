@@ -11,6 +11,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -26,7 +27,8 @@ public class VehicleController {
         String id = generateId();
         vehicle.setId(id);
         vehicles.put(id, vehicle);
-        userVehicle = vehicle;
+//        Mono.defer((Supplier<Mono<?>>) () -> Mono.justOrEmpty(userVehicle.clone(vehicle)));
+        userVehicle.clone(vehicle);
         return Mono.just(vehicle);
     }
 

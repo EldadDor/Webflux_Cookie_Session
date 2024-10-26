@@ -21,7 +21,7 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+@Order(Ordered.HIGHEST_PRECEDENCE + 2)
 public class CookieDataFilter implements WebFilter {
 
     private static final Logger log = LogManager.getLogger(CookieDataFilter.class);
@@ -45,8 +45,7 @@ public class CookieDataFilter implements WebFilter {
         if (isSwaggerOrSpringDocUrl(path)) {
             return chain.filter(exchange);
         }
-        return ReactiveRequestContextHolder.setExchange(exchange)
-                .then(exchange.getSession()
+        return exchange.getSession()
                         .flatMap(session -> {
                             HttpCookie cookie = exchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
                             if (cookie == null) {
@@ -61,7 +60,6 @@ public class CookieDataFilter implements WebFilter {
                                         return chain.filter(exchange);
                                     });
                         })
-                )
                 .then(Mono.defer(() -> handleResponse(exchange)));
     }
 
