@@ -1,4 +1,4 @@
-package com.edx.reactive;
+package com.edx.reactive.utils;
 
 import org.springframework.web.server.ServerErrorException;
 
