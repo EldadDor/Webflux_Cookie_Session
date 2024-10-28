@@ -18,5 +18,16 @@ public class ReactiveRequestContextHolder {
     public static void clear() {
         CONTEXT.remove();
     }
+
+    // Add new reactive methods while maintaining ThreadLocal for compatibility
+    public static Mono<ServerWebExchange> getExchangeReactive() {
+        return Mono.deferContextual(ctx ->
+                ctx.getOrEmpty("exchange")
+                        .map(v -> (ServerWebExchange) v)
+                        .map(Mono::just)
+                        .orElseGet(() -> Mono.justOrEmpty(CONTEXT.get()))
+        );
+    }
 }
+
 

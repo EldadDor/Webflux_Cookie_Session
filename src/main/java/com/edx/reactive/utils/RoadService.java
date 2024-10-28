@@ -28,7 +28,7 @@ public class RoadService {
     public Mono<Void> addVehicleToRoad(Vehicle vehicle) {
         return Mono.fromRunnable(() -> {
             vehiclesOnRoad.put(vehicle.getId(), vehicle);
-            userVehicle = vehicle; // This will trigger the cookie update
+            userVehicle.clone(vehicle); // This will trigger the cookie update
         });
     }
 
