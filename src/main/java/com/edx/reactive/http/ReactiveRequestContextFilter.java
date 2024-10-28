@@ -9,15 +9,29 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ReactiveRequestContextFilter implements WebFilter {
-
-
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
+        if (isSwaggerUrl(path)) {
+            return chain.filter(exchange);
+        }
+
         ReactiveRequestContextHolder.setExchange(exchange);
         return chain.filter(exchange)
+                .contextWrite(ctx -> ctx.put("exchange", exchange))
                 .doFinally(signalType -> ReactiveRequestContextHolder.clear());
     }
+
+    private boolean isSwaggerUrl(String path) {
+        return path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/webjars/");
+    }
+
+
+
 }

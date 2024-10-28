@@ -9,5 +9,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface CookieSession {
-    String value() default "";
+    String beanName() default ""; // Empty string means no specific bean name
 }
