@@ -54,8 +54,8 @@ public class CookieResponseFilter implements WebFilter {
         CookieData cookieData = cookieDataManager.getCookieData(session.getId());
         if (shouldUpdateCookie(cookieData)) {
             try {
-                String jsonValue = objectMapper.writeValueAsString(cookieData);
-                String encryptedValue = encryptionService.encrypt(jsonValue);
+                String jsonValue = objectMapper.writeValueAsString(objectMapper.writeValueAsString(((CglibProxyFactory.ModifyingMethodInterceptor) CglibProxyFactory.getInvocationHandler(cookieData)).getTargetObject()));
+                String encryptedValue = encryptionService.encryptAndCompress(jsonValue);
                 ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
                         .path("/")
                         .build();
