@@ -96,7 +96,7 @@ public class CookieDataFilter implements WebFilter {
 
     private Mono<CookieData> processCookie(HttpCookie cookie, String sessionId) {
         return Mono.fromCallable(() -> {
-            String decryptedValue = encryptionService.decrypt(cookie.getValue());
+            String decryptedValue = encryptionService.decompressAndDecrypt(cookie.getValue());
             return objectMapper.readValue(decryptedValue, CookieData.class);
         }).onErrorResume(e -> {
             log.error("Error processing cookie", e);

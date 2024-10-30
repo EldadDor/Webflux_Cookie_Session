@@ -1,5 +1,4 @@
 package com.edx.reactive.aop;
-
 import com.edx.reactive.common.CookieData;
 import com.edx.reactive.common.CookieSession;
 import com.edx.reactive.spring.BeanTypeResolver;
@@ -14,39 +13,46 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-
+import reactor.core.publisher.Mono;
 import java.lang.reflect.Field;
+
 
 @Aspect
 @Component
 public class CookieSessionAspect {
+
     private static final Logger log = LogManager.getLogger(CookieSessionAspect.class);
+
     private final CookieDataManager cookieDataManager;
     private final BeanTypeResolver beanTypeResolver;
+
 
     public CookieSessionAspect(CookieDataManager cookieDataManager, BeanTypeResolver beanTypeResolver) {
         this.cookieDataManager = cookieDataManager;
         this.beanTypeResolver = beanTypeResolver;
     }
 
+
     @Around("@within(org.springframework.stereotype.Component) || " +
             "@within(org.springframework.stereotype.Service) || " +
             "@within(org.springframework.web.bind.annotation.RestController)")
     public Object aroundComponentOrRestController(ProceedingJoinPoint joinPoint) throws Throwable {
+
         log.info("aroundComponentOrRestController Before");
         Object target = joinPoint.getTarget();
         Class<?> targetClass = target.getClass();
 
-        ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
-        if (exchange == null || isSwaggerComponent(target)) {
+
+        Mono<ServerWebExchange> exchange = ReactiveRequestContextHolder.getExchangeReactive();
+        if (exchange == null) {
             return joinPoint.proceed();
         }
-
         for (Field field : targetClass.getDeclaredFields()) {
             if (field.isAnnotationPresent(CookieSession.class)) {
                 injectProxiedCookieData(target, field, exchange);
             }
         }
+
 
         try {
             Object proceed = joinPoint.proceed();
@@ -57,15 +63,36 @@ public class CookieSessionAspect {
         }
     }
 
+    private void injectProxiedCookieData(Object target, Field field, Mono<ServerWebExchange> exchange) {
+        exchange.flatMap(ServerWebExchange::getSession)
+                .flatMap(session -> {
+                    String sessionId = session.getId();
+                    CookieData cookieData = cookieDataManager.getCookieData(sessionId);
+                    if (cookieData == null) {
+                        cookieData = (CookieData) beanTypeResolver.createInstance(field.getType(), field);
+                    }
+                    CookieData proxiedData = CglibProxyFactory.createProxy(cookieData);
+                    try {
+                        field.setAccessible(true);
+                        field.set(target, proxiedData);
+                        cookieDataManager.setCookieData(sessionId, proxiedData);
+                        return Mono.empty();
+                    } catch (IllegalAccessException e) {
+                        log.error("error={}", e.getMessage(), e);
+                        return Mono.error(e);
+                    }
+                })
+                .subscribe();
+    }
+
+
     private void injectProxiedCookieData(Object target, Field field, ServerWebExchange exchange) {
         exchange.getSession().subscribe(session -> {
             String sessionId = session.getId();
             CookieData cookieData = cookieDataManager.getCookieData(sessionId);
-
             if (cookieData == null) {
                 cookieData = (CookieData) beanTypeResolver.createInstance(field.getType(), field);
             }
-
             CookieData proxiedData = CglibProxyFactory.createProxy(cookieData);
             try {
                 field.setAccessible(true);
@@ -77,6 +104,7 @@ public class CookieSessionAspect {
         });
     }
 
+
     private boolean isSwaggerComponent(Object target) {
         String className = target.getClass().getName();
         return className.contains("springfox") ||
@@ -85,10 +113,3 @@ public class CookieSessionAspect {
     }
 }
 
-
-//    private CookieData createDefaultCookieData(Class<?> type) {
-//        if (applicationContext.getBeansOfType(type).size() > 1) {
-//            return (CookieData) applicationContext.getBeansOfType(type).entrySet().stream().findFirst().get().getValue();
-//        }
-//        return (CookieData) applicationContext.getBean(type);
-//    }
