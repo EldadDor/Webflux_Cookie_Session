@@ -4,7 +4,9 @@ import com.edx.reactive.common.CookieSession;
 import com.edx.reactive.model.Car;
 import com.edx.reactive.model.Motorbike;
 import com.edx.reactive.model.Vehicle;
+import com.edx.reactive.utils.ReactiveRequestContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -30,8 +32,23 @@ public class VehicleController {
             vehicles.put(id, vehicle);
             userVehicle.clone(vehicle);
             return vehicle;
-        });
+        }).flatMap(v ->
+                ReactiveRequestContextHolder.getExchangeReactive()
+                        .flatMap(exchange ->
+                                exchange.getSession()
+                                        .doOnNext(session -> {
+                                            // Force session changes to be processed
+                                            session.save();
+                                        })
+                                        .thenReturn(v)
+                        )
+        ).delayUntil(v ->
+                // Ensure all reactive operations complete before returning
+                ReactiveRequestContextHolder.getExchangeReactive()
+                        .flatMap(ServerWebExchange::getSession)
+        );
     }
+
 
     @GetMapping("/{id}")
     public Mono<Vehicle> getVehicleById(@PathVariable String id) {
