@@ -43,25 +43,27 @@ public class CookieDataFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        CookieExchangeDecorator decoratedExchange = (CookieExchangeDecorator) exchange;
         String path = exchange.getRequest().getURI().getPath();
         if (isSwaggerOrSpringDocUrl(path)) {
-            return chain.filter(exchange);
+            return chain.filter(decoratedExchange);
         }
 
-        return exchange.getSession()
+        return decoratedExchange.getSession()
                 .flatMap(session -> {
-                    HttpCookie cookie = exchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
+                    HttpCookie cookie = decoratedExchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
                     if (cookie == null) {
                         if (!cookieDataManager.containsSession(session.getId())) {
                             cookieDataManager.createEmptySession(session.getId());
                         }
-                        return chain.filter(exchange);
+                        return chain.filter(decoratedExchange).log();
                     }
+
 
                     return processCookie(cookie, session.getId())
                             .flatMap(cookieData -> {
                                 cookieDataManager.setCookieData(session.getId(), cookieData);
-                                return chain.filter(exchange);
+                                return chain.filter(decoratedExchange);
                             });
                 });
     }

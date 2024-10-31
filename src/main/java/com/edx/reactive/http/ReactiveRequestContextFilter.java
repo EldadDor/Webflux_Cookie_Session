@@ -15,14 +15,15 @@ import reactor.core.publisher.Mono;
 public class ReactiveRequestContextFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        ServerWebExchange decoratedExchange = new CookieExchangeDecorator(exchange);
         String path = exchange.getRequest().getURI().getPath();
         if (isSwaggerUrl(path)) {
-            return chain.filter(exchange);
+            return chain.filter(decoratedExchange);
         }
 
-        ReactiveRequestContextHolder.setExchange(exchange);
-        return chain.filter(exchange)
-                .contextWrite(ctx -> ctx.put("exchange", exchange))
+        ReactiveRequestContextHolder.setExchange(decoratedExchange);
+        return chain.filter(decoratedExchange)
+                .contextWrite(ctx -> ctx.put("exchange", exchange)).log()
                 .doFinally(signalType -> ReactiveRequestContextHolder.clear());
     }
 

@@ -1,5 +1,6 @@
 package com.edx.reactive.config.vehicle;
 
+import com.edx.reactive.CookieInjectionApplication;
 import com.edx.reactive.model.Car;
 import com.edx.reactive.model.Vehicle;
 import org.junit.jupiter.api.Test;
@@ -9,7 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = {CookieInjectionApplication.class}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 public class VehicleFlowTest {
 
