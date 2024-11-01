@@ -17,9 +17,9 @@ public class ReactiveRequestContextFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerWebExchange decoratedExchange = new CookieExchangeDecorator(exchange);
         String path = exchange.getRequest().getURI().getPath();
-        if (isSwaggerUrl(path)) {
-            return chain.filter(decoratedExchange);
-        }
+       /* if (isSwaggerUrl(path)) {
+            return chain.filter(decoratedExchange).log();
+        }*/
 
         ReactiveRequestContextHolder.setExchange(decoratedExchange);
         return chain.filter(decoratedExchange)

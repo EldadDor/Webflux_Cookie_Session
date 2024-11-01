@@ -16,9 +16,11 @@ import org.springframework.web.reactive.function.server.*;
 import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Mono;
 
-@Component
+//@Component
 public class CookieHandlerFilterFunction implements HandlerFilterFunction<ServerResponse, ServerResponse> {
+
     private static final Logger log = LogManager.getLogger(CookieHandlerFilterFunction.class);
+
     @Autowired
     private CookieDataManager cookieDataManager;
 
@@ -31,42 +33,36 @@ public class CookieHandlerFilterFunction implements HandlerFilterFunction<Server
     @Override
     public Mono<ServerResponse> filter(ServerRequest request, HandlerFunction<ServerResponse> next) {
         return next.handle(request)
-                .flatMap(response -> request.session()
-                        .flatMap(session -> addCookieToResponse(session, response))
-                        .defaultIfEmpty(response));
+                .flatMap(response -> addCookieToResponse(request, response));
     }
 
-    private Mono<ServerResponse> addCookieToResponse(WebSession session, ServerResponse originalResponse) {
-        return Mono.defer(() -> {
-            try {
-                CookieData cookieData = cookieDataManager.getCookieData(session.getId());
-                if (cookieData == null) {
-                    return Mono.just(originalResponse);
-                }
-                String jsonValue = objectMapper.writeValueAsString(cookieData);
-                String encryptedValue = encryptionService.encryptAndCompress(jsonValue);
-//                String encryptedValue = "TESTCookieValue";
+    private Mono<ServerResponse> addCookieToResponse(ServerRequest request, ServerResponse originalResponse) {
+        return request.session()
+                .flatMap(session -> {
+                    CookieData cookieData = cookieDataManager.getCookieData(session.getId());
+                    if (cookieData == null) {
+                        return Mono.just(originalResponse);
+                    }
 
-                ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
-                        .path("/")
-                        .build();
-
-                // Create a new response with the additional cookie using BodyBuilder
-                Mono<ServerResponse> build = ServerResponse
-                        .status(originalResponse.statusCode())
-                        .headers(headers -> headers.addAll(originalResponse.headers()))
-                        .cookies(cookies -> {
-                            cookies.addAll(originalResponse.cookies());
-                            cookies.add(WebConstants.COOKIE_NAME, cookie);
-                        })
-                        .build();
-                return build;
-
-            } catch (JsonProcessingException e) {
-                log.error("Error processing cookie", e);
-                return Mono.error(e);
-            }
-        });
+                    try {
+                        String jsonValue = objectMapper.writeValueAsString(cookieData);
+                        String encryptedValue = encryptionService.encryptAndCompress(jsonValue);
+                        ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
+                                .path("/")
+                                .build();
+                        return ServerResponse
+                                .status(originalResponse.statusCode())
+                                .headers(headers -> headers.addAll(originalResponse.headers()))
+                                .cookies(cookies -> {
+                                    cookies.addAll(originalResponse.cookies());
+                                    cookies.add(WebConstants.COOKIE_NAME, cookie);
+                                })
+                                .build();
+                    } catch (JsonProcessingException e) {
+                        log.error("Error processing cookie", e);
+                        return Mono.just(originalResponse);
+                    }
+                })
+                .defaultIfEmpty(originalResponse);
     }
 }
-

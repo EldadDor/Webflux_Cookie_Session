@@ -13,8 +13,8 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 
-@Component
-@Order(Ordered.LOWEST_PRECEDENCE)
+//@Component
+//@Order(Ordered.LOWEST_PRECEDENCE)
 public class CookieWebFilter implements WebFilter {
 
     @Autowired
