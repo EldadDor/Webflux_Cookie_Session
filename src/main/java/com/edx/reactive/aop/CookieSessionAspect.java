@@ -17,8 +17,8 @@ import reactor.core.publisher.Mono;
 import java.lang.reflect.Field;
 
 
-//@Aspect
-//@Component
+@Aspect
+@Component
 public class CookieSessionAspect {
 
     private static final Logger log = LogManager.getLogger(CookieSessionAspect.class);

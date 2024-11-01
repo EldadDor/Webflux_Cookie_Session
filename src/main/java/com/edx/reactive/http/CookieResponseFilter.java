@@ -23,8 +23,8 @@ import org.springframework.web.server.WebFilterChain;
 import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Mono;
 
-@Component
-@Order(Ordered.LOWEST_PRECEDENCE - 1)
+//@Component
+//@Order(Ordered.LOWEST_PRECEDENCE - 1)
 public class CookieResponseFilter implements WebFilter {
     private static final Logger log = LogManager.getLogger(CookieResponseFilter.class);
 

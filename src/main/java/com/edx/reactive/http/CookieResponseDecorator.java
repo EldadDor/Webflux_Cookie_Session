@@ -29,14 +29,17 @@ public class CookieResponseDecorator extends ServerHttpResponseDecorator {
     @Override
     public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
         return Mono.defer(() -> {
-            writePendingCookies();
+            if (!cookiesWritten && !pendingCookies.isEmpty()) {
+                pendingCookies.forEach(getDelegate()::addCookie);
+                cookiesWritten = true;
+            }
             return getDelegate().writeWith(body);
         });
     }
 
     @Override
     public void addCookie(ResponseCookie cookie) {
-        if (!isCommitted()) {
+        if (!isCommitted() && !cookiesWritten) {
             pendingCookies.add(cookie);
         }
     }
@@ -56,8 +59,12 @@ public class CookieResponseDecorator extends ServerHttpResponseDecorator {
     public void beforeCommit(Supplier<? extends Mono<Void>> action) {
         log.info("Registering before commit action");
         getDelegate().beforeCommit(() -> {
-            writePendingCookies();  // Ensure pending cookies are written
-            return action.get();
+            return Mono.fromRunnable(() -> {
+                if (!cookiesWritten && !pendingCookies.isEmpty()) {
+                    pendingCookies.forEach(getDelegate()::addCookie);
+                    cookiesWritten = true;
+                }
+            }).then(action.get());
         });
     }
 

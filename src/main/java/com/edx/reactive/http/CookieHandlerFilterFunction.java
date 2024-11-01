@@ -43,25 +43,24 @@ public class CookieHandlerFilterFunction implements HandlerFilterFunction<Server
                 if (cookieData == null) {
                     return Mono.just(originalResponse);
                 }
-
                 String jsonValue = objectMapper.writeValueAsString(cookieData);
                 String encryptedValue = encryptionService.encryptAndCompress(jsonValue);
+//                String encryptedValue = "TESTCookieValue";
 
                 ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
                         .path("/")
                         .build();
 
                 // Create a new response with the additional cookie using BodyBuilder
-                ServerResponse.BodyBuilder responseBuilder = ServerResponse
+                Mono<ServerResponse> build = ServerResponse
                         .status(originalResponse.statusCode())
                         .headers(headers -> headers.addAll(originalResponse.headers()))
                         .cookies(cookies -> {
                             cookies.addAll(originalResponse.cookies());
                             cookies.add(WebConstants.COOKIE_NAME, cookie);
-                        });
-
-                // Build the new response
-                return responseBuilder.build().then(Mono.just(originalResponse));
+                        })
+                        .build();
+                return build;
 
             } catch (JsonProcessingException e) {
                 log.error("Error processing cookie", e);
