@@ -38,12 +38,12 @@ public class CookieSessionAspect {
             "@within(org.springframework.web.bind.annotation.RestController)")
     public Object aroundComponentOrRestController(ProceedingJoinPoint joinPoint) throws Throwable {
 
-        log.info("aroundComponentOrRestController Before");
+//        log.info("aroundComponentOrRestController Before");
         Object target = joinPoint.getTarget();
         Class<?> targetClass = target.getClass();
 
 
-        Mono<ServerWebExchange> exchange = ReactiveRequestContextHolder.getExchangeReactive();
+        ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
         if (exchange == null) {
             return joinPoint.proceed();
         }
@@ -52,11 +52,9 @@ public class CookieSessionAspect {
                 injectProxiedCookieData(target, field, exchange);
             }
         }
-
-
         try {
             Object proceed = joinPoint.proceed();
-            log.info("aroundComponentOrRestController After");
+//            log.info("aroundComponentOrRestController After");
             return proceed;
         } catch (Throwable e) {
             throw new RuntimeException(e);

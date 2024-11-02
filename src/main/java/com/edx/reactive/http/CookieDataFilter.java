@@ -21,8 +21,8 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-@Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 2)
+//@Component
+//@Order(Ordered.HIGHEST_PRECEDENCE + 2)
 public class CookieDataFilter implements WebFilter {
 
     private static final Logger log = LogManager.getLogger(CookieDataFilter.class);
@@ -43,51 +43,28 @@ public class CookieDataFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        CookieExchangeDecorator decoratedExchange = (CookieExchangeDecorator) exchange;
         String path = exchange.getRequest().getURI().getPath();
         if (isSwaggerOrSpringDocUrl(path)) {
-            return chain.filter(exchange);
+            return chain.filter(decoratedExchange);
         }
 
-        return exchange.getSession()
+        return decoratedExchange.getSession()
                 .flatMap(session -> {
-                    HttpCookie cookie = exchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
+                    HttpCookie cookie = decoratedExchange.getRequest().getCookies().getFirst(WebConstants.COOKIE_NAME);
                     if (cookie == null) {
                         if (!cookieDataManager.containsSession(session.getId())) {
                             cookieDataManager.createEmptySession(session.getId());
                         }
-                        return chain.filter(exchange);
+                        return chain.filter(decoratedExchange).log();
                     }
-
                     return processCookie(cookie, session.getId())
                             .flatMap(cookieData -> {
                                 cookieDataManager.setCookieData(session.getId(), cookieData);
-                                return chain.filter(exchange);
+                                return chain.filter(decoratedExchange).log();
                             });
                 });
     }
-
-
- /*   private Mono<Void> handleResponse(ServerWebExchange exchange, CookieData cookieData) {
-        if (CglibProxyFactory.isProxy(cookieData)) {
-            MethodInterceptor interceptor = CglibProxyFactory.getInvocationHandler(cookieData);
-            if (interceptor instanceof CglibProxyFactory.ModifyingMethodInterceptor) {
-                CglibProxyFactory.ModifyingMethodInterceptor modifyingInterceptor = (CglibProxyFactory.ModifyingMethodInterceptor) interceptor;
-                if (modifyingInterceptor.isModified()) {
-                    try {
-                        String jsonValue = objectMapper.writeValueAsString(cookieData);
-                        String encryptedValue = encryptionService.encrypt(jsonValue);
-                        ResponseCookie cookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encryptedValue)
-                                .path("/")
-                                .build();
-                        exchange.getResponse().addCookie(cookie);
-                    } catch (JsonProcessingException e) {
-                        log.error("Error serializing cookie data", e);
-                    }
-                }
-            }
-        }
-        return Mono.empty();
-    }*/
 
 
     private boolean isSwaggerOrSpringDocUrl(String path) {
