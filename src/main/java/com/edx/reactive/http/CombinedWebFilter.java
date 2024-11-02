@@ -3,6 +3,7 @@ package com.edx.reactive.http;
 import com.edx.reactive.common.CookieData;
 import com.edx.reactive.common.DefaultCookieData;
 import com.edx.reactive.common.WebConstants;
+import com.edx.reactive.utils.CglibProxyFactory;
 import com.edx.reactive.utils.CookieDataManager;
 import com.edx.reactive.utils.CookieEncryptionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -90,7 +91,7 @@ public class CombinedWebFilter implements WebFilter {
                         .flatMap(dataBuffer -> {
                             // Add cookie before writing the response
                             CookieData cookieData = cookieDataManager.getCookieData(sessionId);
-                            if (cookieData != null) {
+                            if (cookieData != null && shouldUpdateCookie(cookieData)) {
                                 ResponseCookie responseCookie = ResponseCookie.from(WebConstants.COOKIE_NAME,
                                                 "TestCookieValue")
                                         .path("/")
@@ -104,7 +105,6 @@ public class CombinedWebFilter implements WebFilter {
                                         responseCookie
                                 );
                             }
-
                             return super.writeWith(Mono.just(dataBuffer));
                         });
             }
@@ -122,5 +122,12 @@ public class CombinedWebFilter implements WebFilter {
     private CookieData createDefaultCookieData() {
         // Create and return a default CookieData object based on the type
         return applicationContext.getBean(DefaultCookieData.class);
+    }
+
+    private boolean shouldUpdateCookie(CookieData cookieData) {
+        return cookieData != null &&
+                CglibProxyFactory.isProxy(cookieData) &&
+                CglibProxyFactory.getInvocationHandler(cookieData) instanceof CglibProxyFactory.ModifyingMethodInterceptor &&
+                ((CglibProxyFactory.ModifyingMethodInterceptor) CglibProxyFactory.getInvocationHandler(cookieData)).isModified();
     }
 }

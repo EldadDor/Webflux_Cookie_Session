@@ -42,7 +42,8 @@ public class VehicleController {
                     String id = generateId();
                     vehicle.setId(id);
                     vehicles.put(id, vehicle);
-                    cookieDataManager.setCookieData(sessionId, vehicle);
+                    userVehicle.clone(vehicle);
+//                    cookieDataManager.setCookieData(sessionId, vehicle);
                     return vehicle;
                 });
         vehicleMono.delayElement(Duration.ofMillis(500));
