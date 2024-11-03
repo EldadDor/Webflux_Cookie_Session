@@ -19,8 +19,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-//@Component
-//@Order(Ordered.HIGHEST_PRECEDENCE)
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class LoggerWebFilter implements WebFilter {
 	private static final Logger LOGGER = LogManager.getLogger(LoggerWebFilter.class);
 

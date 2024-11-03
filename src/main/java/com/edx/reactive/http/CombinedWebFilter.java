@@ -76,7 +76,6 @@ public class CombinedWebFilter implements WebFilter {
     }
 
 
-
     private Mono<Void> processResponse(ServerWebExchange exchange,
                                        WebFilterChain chain,
                                        String sessionId) {
@@ -92,8 +91,8 @@ public class CombinedWebFilter implements WebFilter {
                             // Add cookie before writing the response
                             CookieData cookieData = cookieDataManager.getCookieData(sessionId);
                             if (cookieData != null && shouldUpdateCookie(cookieData)) {
-                                ResponseCookie responseCookie = ResponseCookie.from(WebConstants.COOKIE_NAME,
-                                                "TestCookieValue")
+                                String encrypted = encryptionService.encryptAndCompress(((CglibProxyFactory.ModifyingMethodInterceptor) CglibProxyFactory.getInvocationHandler(cookieData)).getTargetObject().toString());
+                                ResponseCookie responseCookie = ResponseCookie.from(WebConstants.COOKIE_NAME, encrypted)
                                         .path("/")
                                         .maxAge(Duration.ofDays(1))
                                         .httpOnly(true)
