@@ -35,7 +35,7 @@ public class VehicleController {
     @PostMapping
     public Mono<Vehicle> createVehicle(@RequestBody Vehicle vehicle) {
         log.info("Controller vehicle={}", vehicle);
-        Mono<Vehicle> vehicleMono = ReactiveRequestContextHolder.getExchangeReactive()
+        Mono<Vehicle> vehicleMono = ReactiveRequestContextHolder.getExchange()
                 .flatMap(exchange -> exchange.getSession())
                 .map(session -> {
                     String sessionId = session.getId();

@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant C as Client
+    participant F as CombinedWebFilter
+    participant CH as Filter Chain
+    participant CT as Controller
+    
+    C->>F: HTTP Request
+    
+    Note over F: 1. Get Session
+    Note over F: 2. Check/Process Cookie
+    
+    F->>CH: chain.filter(decoratedExchange)
+    CH->>CT: Forward Request
+    
+    Note over CT: Process Request
+    
+    CT-->>CH: Return Mono Response
+    CH-->>F: Response flows back
+    
+    Note over F: Intercept with responseDecorator
+    Note over F: Add Cookie to Response
+    
+    F-->>C: Modified Response
