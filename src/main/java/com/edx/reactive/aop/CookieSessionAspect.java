@@ -43,8 +43,32 @@ public class CookieSessionAspect {
         Class<?> targetClass = target.getClass();
 
 
-        ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
-        if (exchange == null) {
+//        ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
+
+        return ReactiveRequestContextHolder.getExchange()
+                .flatMap(exchange -> {
+                    // Do something with exchange
+                    return Mono.defer(() -> {
+                        try {
+                            for (Field field : targetClass.getDeclaredFields()) {
+                                if (field.isAnnotationPresent(CookieSession.class)) {
+                                    injectProxiedCookieData(target, field, exchange);
+                                }
+                            }
+                            Object result = joinPoint.proceed();
+                            if (result instanceof Mono) {
+                                return (Mono<?>) result;
+                            }
+                            return Mono.just(result);
+                        } catch (Throwable t) {
+                            return Mono.error(t);
+                        }
+                    });
+                });
+
+
+
+     /*   if (exchange == null) {
             return joinPoint.proceed();
         }
         for (Field field : targetClass.getDeclaredFields()) {
@@ -58,7 +82,7 @@ public class CookieSessionAspect {
             return proceed;
         } catch (Throwable e) {
             throw new RuntimeException(e);
-        }
+        }*/
     }
 
     private void injectProxiedCookieData(Object target, Field field, Mono<ServerWebExchange> exchange) {

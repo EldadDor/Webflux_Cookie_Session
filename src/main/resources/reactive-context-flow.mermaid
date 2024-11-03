@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant R1 as Request 1
+    participant C1 as Context Chain 1
+    participant R2 as Request 2
+    participant C2 as Context Chain 2
+    participant R3 as Request 3
+    participant C3 as Context Chain 3
+
+    R1->>C1: Request 1 starts
+    Note over C1: Creates Context 1<br/>with Exchange 1
+    
+    R2->>C2: Request 2 starts
+    Note over C2: Creates Context 2<br/>with Exchange 2
+    
+    R3->>C3: Request 3 starts
+    Note over C3: Creates Context 3<br/>with Exchange 3
+    
+    Note over C1,C3: All contexts run<br/>independently
+    
+    C1-->>R1: Response 1
+    C2-->>R2: Response 2
+    C3-->>R3: Response 3

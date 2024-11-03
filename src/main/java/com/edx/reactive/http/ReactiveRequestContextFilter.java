@@ -13,19 +13,30 @@ import reactor.core.publisher.Mono;
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ReactiveRequestContextFilter implements WebFilter {
+
+
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerWebExchange decoratedExchange = new CookieExchangeDecorator(exchange);
+        return chain.filter(decoratedExchange)
+                .contextWrite(ReactiveRequestContextHolder.withExchange(decoratedExchange));
+    }
+
+
+  /*  @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        ServerWebExchange decoratedExchange = new CookieExchangeDecorator(exchange);
         String path = exchange.getRequest().getURI().getPath();
-       /* if (isSwaggerUrl(path)) {
+       *//* if (isSwaggerUrl(path)) {
             return chain.filter(decoratedExchange).log();
-        }*/
+        }*//*
 
         ReactiveRequestContextHolder.setExchange(decoratedExchange);
         return chain.filter(decoratedExchange)
                 .contextWrite(ctx -> ctx.put("exchange", exchange)).log()
                 .doFinally(signalType -> ReactiveRequestContextHolder.clear());
-    }
+    }*/
 
     private boolean isSwaggerUrl(String path) {
         return path.startsWith("/swagger-ui") ||
