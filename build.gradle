@@ -32,6 +32,9 @@ dependencies {
 	implementation 'com.github.luben:zstd-jni:1.5.6-6'
 	// SpringDoc OpenAPI (Swagger) for WebFlux
 	implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.3.0'
+	// jpa
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.hibernate.validator:hibernate-validator'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -39,6 +42,7 @@ dependencies {
 	testImplementation 'io.projectreactor:reactor-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+	runtimeOnly 'org.hsqldb:hsqldb'
 
 
 	modules {
