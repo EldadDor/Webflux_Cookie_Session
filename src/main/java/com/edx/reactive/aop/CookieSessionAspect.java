@@ -33,16 +33,11 @@ public class CookieSessionAspect {
     }
 
 
-    @Around("@within(org.springframework.stereotype.Component) || " +
-            "@within(org.springframework.stereotype.Service) || " +
-            "@within(org.springframework.web.bind.annotation.RestController)")
+    @Around("@within(com.edx.reactive.common.CookieScoped)")
     public Object aroundComponentOrRestController(ProceedingJoinPoint joinPoint) throws Throwable {
 
-//        log.info("aroundComponentOrRestController Before");
         Object target = joinPoint.getTarget();
         Class<?> targetClass = target.getClass();
-
-
 //        ServerWebExchange exchange = ReactiveRequestContextHolder.getExchange();
 
         return ReactiveRequestContextHolder.getExchange()

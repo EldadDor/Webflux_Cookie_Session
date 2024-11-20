@@ -1,5 +1,6 @@
 package com.edx.reactive.http.test;
 
+import com.edx.reactive.common.CookieScoped;
 import com.edx.reactive.common.CookieSession;
 import com.edx.reactive.http.CookieResponseFilter;
 import com.edx.reactive.model.Car;
@@ -22,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/vehicles")
+@CookieScoped
 public class VehicleController {
 
     private static final Logger log = LogManager.getLogger(VehicleController.class);
